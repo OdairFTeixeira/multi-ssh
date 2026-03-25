@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Multi SSH
+Comment=SSH Connection Manager
+Exec=/usr/local/bin/multi-ssh
+Icon=multi-ssh
+Terminal=false
+Type=Application
+Categories=System;Network;Utility;
+Keywords=ssh;terminal;remote;server;connection;
+StartupWMClass=multi-ssh

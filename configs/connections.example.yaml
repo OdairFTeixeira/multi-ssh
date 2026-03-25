@@ -1,0 +1,48 @@
+# connections.yaml - Multi SSH Configuration
+# Place this file at: ~/.multi-ssh/connections.yaml
+
+settings:
+  default_user: root
+  default_port: 22
+  default_identity_key: ""
+
+connections:
+  - name: "Web Server Production"
+    host: "192.168.1.100"
+    port: 22
+    user: "deploy"
+    identity_key: "~/.ssh/id_rsa"
+    group: "Production"
+    description: "Main web server"
+    tags:
+      - web
+      - nginx
+
+  - name: "Database Server"
+    host: "192.168.1.101"
+    port: 22
+    user: "admin"
+    group: "Production"
+    description: "PostgreSQL main database"
+    tags:
+      - database
+      - postgresql
+
+  - name: "Staging Server"
+    host: "10.0.0.50"
+    port: 2222
+    user: "developer"
+    group: "Staging"
+    description: "Staging environment"
+    tags:
+      - staging
+
+  - name: "Dev Machine"
+    host: "dev.example.com"
+    port: 22
+    user: "odair"
+    identity_key: "~/.ssh/id_ed25519"
+    group: "Development"
+    description: "Personal development server"
+    tags:
+      - dev

@@ -1,0 +1,20 @@
+# Build output
+build/bin/
+*.exe
+*.app
+
+# Go vendor directory (root only — frontend/vendor is intentionally committed)
+/vendor/
+*.test
+*.out
+*.prof
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
