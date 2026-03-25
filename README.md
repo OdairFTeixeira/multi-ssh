@@ -23,7 +23,7 @@ A beautiful desktop SSH connection manager built with Go + Wails.
 
 ## Screenshots
 
-> _Screenshots coming soon. Run `make dev` to see it live._
+![Multi SSH main window](docs/screenshots/main.png)
 
 ## Installation
 
