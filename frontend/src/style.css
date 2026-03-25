@@ -26,7 +26,7 @@
 /* Reset */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-html, body {
+html, body, #root {
     height: 100%;
     overflow: hidden;
     font-family: var(--font);
@@ -56,10 +56,60 @@ html, body {
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
+    transition: width 0.2s ease, min-width 0.2s ease;
+    overflow: hidden;
+}
+
+#sidebar.collapsed {
+    width: 44px;
+    min-width: 44px;
+}
+
+#sidebar.collapsed .sidebar-search,
+#sidebar.collapsed .group-label,
+#sidebar.collapsed .conn-info,
+#sidebar.collapsed .conn-count,
+#sidebar.collapsed .app-title {
+    display: none;
+}
+
+#sidebar.collapsed .conn-item {
+    justify-content: center;
+    padding: 8px 0;
+}
+
+#sidebar.collapsed .sidebar-footer {
+    justify-content: center;
+}
+
+#sidebar.collapsed #btnToggleSidebar i {
+    display: inline-block;
+    transform: rotate(180deg);
 }
 
 .sidebar-header {
     padding: 16px 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#btnToggleSidebar {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    transition: color 0.15s;
+}
+
+#btnToggleSidebar:hover {
+    color: var(--text);
 }
 
 .app-title {

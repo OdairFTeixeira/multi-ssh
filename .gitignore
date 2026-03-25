@@ -3,6 +3,10 @@ build/bin/
 *.exe
 *.app
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
 # Go vendor directory (root only — frontend/vendor is intentionally committed)
 /vendor/
 *.test

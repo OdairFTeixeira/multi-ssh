@@ -46,6 +46,7 @@ clean:
 deps:
 	@echo "📦 Installing dependencies..."
 	@go mod tidy
+	@cd frontend && npm install
 	@echo "✅ Dependencies installed"
 
 # Format code
