@@ -91,6 +91,7 @@
                         <div class="conn-host">${esc(c.user || 'root')}@${esc(c.host)}</div>
                     </div>`;
                 el.addEventListener('click', () => selectConnection(i));
+                el.addEventListener('dblclick', () => { selectConnection(i); connect(); });
                 connectionList.appendChild(el);
             }
         }
