@@ -25,6 +25,8 @@ A beautiful desktop SSH connection manager built with Go + Wails.
 
 ![Multi SSH main window](docs/screenshots/main.png)
 
+![Collapsed sidebar with active session](docs/screenshots/collapsed.png)
+
 ## Installation
 
 ### Download a Release
