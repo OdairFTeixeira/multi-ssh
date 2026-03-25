@@ -2,7 +2,7 @@
 
 A beautiful desktop SSH connection manager built with Go + Wails.
 
-![License](https://img.shields.io/github/license/odair/multi-ssh)
+![License](https://img.shields.io/github/license/OdairFTeixeira/multi-ssh)
 ![Go](https://img.shields.io/badge/go-1.21%2B-00ADD8?logo=go)
 ![Wails](https://img.shields.io/badge/wails-v2-red?logo=go)
 ![Platform](https://img.shields.io/badge/platform-linux%20%7C%20windows-blue)
