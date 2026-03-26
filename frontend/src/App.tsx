@@ -28,7 +28,6 @@ export default function App() {
     const [termBgColor, setTermBgColor] = useState<string>(
         () => localStorage.getItem('termBgColor') ?? '#000000'
     )
-
     const termFitRefs = useRef<Array<(() => void) | null>>([null, null, null, null])
 
     const activePane = panes[activePaneIndex] ?? panes[0]
