@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { model } from '../../wailsjs/go/models'
-
-type Connection = model.Connection
+import { Connection } from '../types'
 
 interface FormState {
     name: string

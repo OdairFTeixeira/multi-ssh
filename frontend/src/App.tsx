@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { GetConnections, AddConnection, UpdateConnection, DeleteConnection, StartSSHSession, StopSSHSession, GetWSPort } from '../wailsjs/go/main/App'
+import {
+    GetConnections, AddConnection, UpdateConnection, DeleteConnection,
+    StartSSHSession, StopSSHSession, GetWSPort,
+} from '../wailsjs/go/main/App'
 import { model } from '../wailsjs/go/models'
+import { Pane, SplitMode } from './types'
 import Sidebar from './components/Sidebar'
 import Workspace from './components/Workspace'
 import Modal from './components/Modal'
@@ -10,16 +14,21 @@ type Connection = model.Connection
 
 export default function App() {
     const [connections, setConnections] = useState<Connection[]>([])
-    const [selectedIndex, setSelectedIndex] = useState<number>(-1)
-    const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
-    const [wsPort, setWsPort] = useState<number>(0)
-    const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false)
-    const [modalOpen, setModalOpen] = useState<boolean>(false)
-    const [editingIndex, setEditingIndex] = useState<number>(-1)
-    const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false)
-    const [search, setSearch] = useState<string>('')
+    const [panes, setPanes] = useState<Pane[]>([{ selectedIndex: -1, sessionId: null }])
+    const [activePaneIndex, setActivePaneIndex] = useState(0)
+    const [splitMode, setSplitMode] = useState<SplitMode>('none')
+    const [wsPort, setWsPort] = useState(0)
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+    const [modalOpen, setModalOpen] = useState(false)
+    const [editingIndex, setEditingIndex] = useState(-1)
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+    const [search, setSearch] = useState('')
 
-    const termFitRef = useRef<(() => void) | null>(null)
+    const termFitRefs = useRef<Array<(() => void) | null>>([null, null])
+
+    const activePane = panes[activePaneIndex] ?? panes[0]
+    const selectedIndex = activePane?.selectedIndex ?? -1
+    const currentSessionId = activePane?.sessionId ?? null
 
     useEffect(() => {
         GetWSPort().then(setWsPort)
@@ -37,7 +46,7 @@ export default function App() {
                 }
                 return
             }
-            if (currentSessionId && target.closest?.('#terminal')) return
+            if (currentSessionId && target.closest?.('.terminal-inner')) return
 
             switch (e.key) {
                 case 'Escape':
@@ -45,7 +54,10 @@ export default function App() {
                     else if (deleteModalOpen) setDeleteModalOpen(false)
                     break
                 case 'n': openAddModal(); break
-                case '/': e.preventDefault(); (document.querySelector('#searchInput') as HTMLInputElement)?.focus(); break
+                case '/':
+                    e.preventDefault()
+                    ;(document.querySelector('#searchInput') as HTMLInputElement)?.focus()
+                    break
                 case 'ArrowDown': case 'j':
                     e.preventDefault()
                     if (connections.length) selectConnection(Math.min(selectedIndex + 1, connections.length - 1))
@@ -55,7 +67,7 @@ export default function App() {
                     if (connections.length) selectConnection(Math.max(selectedIndex - 1, 0))
                     break
                 case 'Enter':
-                    if (selectedIndex >= 0 && !currentSessionId) connect()
+                    if (selectedIndex >= 0 && !currentSessionId) connectPane(activePaneIndex)
                     break
                 case 'e':
                     if (selectedIndex >= 0) openEditModal(selectedIndex)
@@ -67,51 +79,122 @@ export default function App() {
         }
         document.addEventListener('keydown', onKey)
         return () => document.removeEventListener('keydown', onKey)
-    }, [connections, selectedIndex, currentSessionId, modalOpen, deleteModalOpen])
+    }, [connections, selectedIndex, currentSessionId, modalOpen, deleteModalOpen, activePaneIndex])
 
     async function loadConnections() {
         try {
             const list = await GetConnections() || []
             setConnections(list)
-            setSelectedIndex(i => {
-                if (i < 0 && list.length > 0) return 0
-                if (i >= list.length) return list.length - 1
-                return i
-            })
+            setPanes(prev => prev.map(p => ({
+                ...p,
+                selectedIndex:
+                    p.selectedIndex < 0 && list.length > 0 ? 0 :
+                    p.selectedIndex >= list.length ? list.length - 1 :
+                    p.selectedIndex,
+            })))
         } catch (e) {
             console.error('Load failed:', e)
         }
     }
 
     const selectConnection = useCallback((i: number) => {
-        setSelectedIndex(prev => {
-            if (prev !== i && currentSessionId) disconnect()
-            return i
+        setPanes(prev => {
+            const next = [...prev]
+            const pane = next[activePaneIndex]
+            if (!pane) return prev
+            if (pane.selectedIndex !== i && pane.sessionId) {
+                StopSSHSession(pane.sessionId)
+                next[activePaneIndex] = { selectedIndex: i, sessionId: null }
+            } else {
+                next[activePaneIndex] = { ...pane, selectedIndex: i }
+            }
+            return next
         })
-    }, [currentSessionId])
+    }, [activePaneIndex])
 
-    const connect = useCallback(async () => {
-        if (selectedIndex < 0 || currentSessionId) return
+    const connectPane = useCallback(async (paneIdx: number) => {
+        const pane = panes[paneIdx]
+        if (!pane || pane.selectedIndex < 0 || pane.sessionId) return
         try {
-            const sessionId = await StartSSHSession(selectedIndex)
-            setCurrentSessionId(sessionId)
+            const sessionId = await StartSSHSession(pane.selectedIndex)
+            setPanes(prev => {
+                const next = [...prev]
+                if (next[paneIdx]) next[paneIdx] = { ...next[paneIdx], sessionId }
+                return next
+            })
         } catch (e) {
             console.error('Connect failed:', e)
         }
-    }, [selectedIndex, currentSessionId])
+    }, [panes])
 
-    const disconnect = useCallback(() => {
-        if (currentSessionId) StopSSHSession(currentSessionId)
-        setCurrentSessionId(null)
-    }, [currentSessionId])
+    const doubleClickConnect = useCallback(async (i: number) => {
+        const pane = panes[activePaneIndex]
+        if (pane?.sessionId) StopSSHSession(pane.sessionId)
+        setPanes(prev => {
+            const next = [...prev]
+            next[activePaneIndex] = { selectedIndex: i, sessionId: null }
+            return next
+        })
+        try {
+            const sessionId = await StartSSHSession(i)
+            setPanes(prev => {
+                const next = [...prev]
+                if (next[activePaneIndex]) {
+                    next[activePaneIndex] = { ...next[activePaneIndex], selectedIndex: i, sessionId }
+                }
+                return next
+            })
+        } catch (e) {
+            console.error('Connect failed:', e)
+        }
+    }, [activePaneIndex, panes])
 
-    const onSessionEnded = useCallback(() => {
-        setCurrentSessionId(null)
+    const disconnectPane = useCallback((paneIdx: number) => {
+        const pane = panes[paneIdx]
+        if (pane?.sessionId) StopSSHSession(pane.sessionId)
+        setPanes(prev => {
+            const next = [...prev]
+            if (next[paneIdx]) next[paneIdx] = { ...next[paneIdx], sessionId: null }
+            return next
+        })
+    }, [panes])
+
+    const onSessionEnded = useCallback((paneIdx: number) => {
+        setPanes(prev => {
+            const next = [...prev]
+            if (next[paneIdx]) next[paneIdx] = { ...next[paneIdx], sessionId: null }
+            return next
+        })
     }, [])
+
+    const splitPane = useCallback(async (mode: 'horizontal' | 'vertical') => {
+        setSplitMode(mode)
+        const connIdx = panes[0]?.selectedIndex ?? -1
+        let sessionId: string | null = null
+        if (connIdx >= 0) {
+            try { sessionId = await StartSSHSession(connIdx) } catch { /* ignore */ }
+        }
+        setPanes(prev => {
+            if (prev.length >= 2) return prev
+            return [...prev, { selectedIndex: connIdx, sessionId }]
+        })
+    }, [panes])
+
+    const unsplit = useCallback(() => {
+        const second = panes[1]
+        if (second?.sessionId) StopSSHSession(second.sessionId)
+        setSplitMode('none')
+        setPanes(prev => [prev[0]])
+        setActivePaneIndex(0)
+    }, [panes])
 
     const toggleSidebar = useCallback(() => {
         setSidebarCollapsed(v => !v)
-        setTimeout(() => termFitRef.current?.(), 210)
+        setTimeout(() => { termFitRefs.current.forEach(fn => fn?.()) }, 210)
+    }, [])
+
+    const handleFitReady = useCallback((paneIdx: number, fn: () => void) => {
+        termFitRefs.current[paneIdx] = fn
     }, [])
 
     function openAddModal() { setEditingIndex(-1); setModalOpen(true) }
@@ -128,7 +211,11 @@ export default function App() {
             const sel = editingIndex
             closeModal()
             await loadConnections()
-            if (sel >= 0) setSelectedIndex(sel)
+            if (sel >= 0) setPanes(prev => {
+                const next = [...prev]
+                next[activePaneIndex] = { ...next[activePaneIndex], selectedIndex: sel }
+                return next
+            })
         } catch (e) {
             console.error('Save error:', e)
         }
@@ -137,10 +224,12 @@ export default function App() {
     async function deleteConnection() {
         if (selectedIndex < 0) return
         try {
-            disconnect()
+            panes.forEach(p => { if (p.sessionId) StopSSHSession(p.sessionId) })
             await DeleteConnection(selectedIndex)
             setDeleteModalOpen(false)
-            setSelectedIndex(-1)
+            setPanes([{ selectedIndex: -1, sessionId: null }])
+            setSplitMode('none')
+            setActivePaneIndex(0)
             await loadConnections()
         } catch (e) {
             console.error('Delete error:', e)
@@ -157,7 +246,7 @@ export default function App() {
                 search={search}
                 collapsed={sidebarCollapsed}
                 onSelect={selectConnection}
-                onDoubleClick={(i) => { selectConnection(i); connect() }}
+                onDoubleClick={doubleClickConnect}
                 onAdd={openAddModal}
                 onToggleCollapse={toggleSidebar}
                 onSearchChange={setSearch}
@@ -175,15 +264,20 @@ export default function App() {
                     </div>
                 ) : (
                     <Workspace
-                        connection={selectedConn}
-                        currentSessionId={currentSessionId}
+                        panes={panes}
+                        activePaneIndex={activePaneIndex}
+                        splitMode={splitMode}
+                        connections={connections}
                         wsPort={wsPort}
-                        onConnect={connect}
-                        onDisconnect={disconnect}
+                        onActivatePane={setActivePaneIndex}
+                        onConnectPane={connectPane}
+                        onDisconnectPane={disconnectPane}
                         onSessionEnded={onSessionEnded}
+                        onSplit={splitPane}
+                        onUnsplit={unsplit}
                         onEdit={() => selectedIndex >= 0 && openEditModal(selectedIndex)}
                         onDelete={() => setDeleteModalOpen(true)}
-                        onFitReady={(fn) => { termFitRef.current = fn }}
+                        onFitReady={handleFitReady}
                     />
                 )}
             </main>

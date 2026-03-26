@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os/exec"
 
+	"github.com/google/uuid"
 	"github.com/odair/multi-ssh/internal/config"
 	"github.com/odair/multi-ssh/internal/model"
 	ptyMgr "github.com/odair/multi-ssh/internal/pty"
@@ -110,7 +111,7 @@ func (a *App) StartSSHSession(index int) (string, error) {
 		conn.Port = 22
 	}
 
-	sessionID := fmt.Sprintf("session-%d", index)
+	sessionID := fmt.Sprintf("session-%d-%s", index, uuid.New().String()[:8])
 	if err := a.pty.StartSession(sessionID, conn); err != nil {
 		return "", err
 	}

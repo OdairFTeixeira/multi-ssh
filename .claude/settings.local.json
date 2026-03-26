@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm install:*)",
+      "Bash(export PATH=\"$PATH:/home/teixeira/.nvm/versions/node/v24.14.1/bin\")",
+      "Bash(npm run:*)"
+    ]
+  }
+}

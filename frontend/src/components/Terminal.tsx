@@ -136,18 +136,20 @@ export default function Terminal({ sessionId, wsPort, onDisconnected, onFitReady
                 dataListenerRef.current.dispose()
                 dataListenerRef.current = null
             }
+            setShowPlaceholder(true)
+            xtermRef.current?.reset()
         }
     }, [sessionId, wsPort])
 
     return (
-        <div className="terminal-container" id="terminalContainer">
+        <div className="terminal-container">
             {showPlaceholder && (
-                <div className="terminal-placeholder" id="terminalPlaceholder">
+                <div className="terminal-placeholder">
                     <i className="ri-terminal-line"></i>
                     <span>Press <kbd>▶</kbd> to connect</span>
                 </div>
             )}
-            <div id="terminal" ref={containerRef}></div>
+            <div className="terminal-inner" ref={containerRef}></div>
         </div>
     )
 }
