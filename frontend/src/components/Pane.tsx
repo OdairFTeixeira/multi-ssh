@@ -6,9 +6,11 @@ interface Props {
     connection: Connection | null
     sessionId: string | null
     isActive: boolean
-    isSplit: boolean
+    showHeader: boolean
     wsPort: number
     paneIndex: number
+    paneCount: number
+    cellStyle?: React.CSSProperties
     onActivate: () => void
     onConnect: () => void
     onDisconnect: () => void
@@ -18,44 +20,35 @@ interface Props {
 }
 
 export default function Pane({
-    connection, sessionId, isActive, isSplit, wsPort,
+    connection, sessionId, isActive, showHeader, wsPort, cellStyle,
     onActivate, onConnect, onDisconnect, onSessionEnded, onClose, onFitReady,
 }: Props) {
     return (
         <div
-            className={`split-pane${isSplit && isActive ? ' active-pane' : ''}`}
+            className={`pane-cell${isActive && showHeader ? ' active-pane' : ''}`}
+            style={cellStyle}
             onClick={!isActive ? onActivate : undefined}
         >
-            {isSplit && (
+            {showHeader && (
                 <div className="pane-header">
                     <span className="pane-name">
                         {connection
                             ? `${connection.user || 'root'}@${connection.host}:${connection.port || 22}`
-                            : 'No connection selected'}
+                            : 'No connection'}
                     </span>
                     {sessionId ? (
-                        <button
-                            className="btn-icon-xs"
-                            title="Disconnect"
-                            onClick={e => { e.stopPropagation(); onDisconnect() }}
-                        >
+                        <button className="btn-icon-xs" title="Disconnect"
+                            onClick={e => { e.stopPropagation(); onDisconnect() }}>
                             <i className="ri-stop-fill"></i>
                         </button>
                     ) : (
-                        <button
-                            className="btn-icon-xs"
-                            title="Connect"
-                            disabled={!connection}
-                            onClick={e => { e.stopPropagation(); onConnect() }}
-                        >
+                        <button className="btn-icon-xs" title="Connect" disabled={!connection}
+                            onClick={e => { e.stopPropagation(); onConnect() }}>
                             <i className="ri-play-fill"></i>
                         </button>
                     )}
-                    <button
-                        className="btn-icon-xs"
-                        title="Close pane"
-                        onClick={e => { e.stopPropagation(); onClose() }}
-                    >
+                    <button className="btn-icon-xs" title="Close pane"
+                        onClick={e => { e.stopPropagation(); onClose() }}>
                         <i className="ri-close-line"></i>
                     </button>
                 </div>

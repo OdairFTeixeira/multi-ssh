@@ -380,34 +380,28 @@ html, body, #root {
     font-weight: 500;
 }
 
-/* ─── Split Layout ─── */
-.split-container {
+/* ─── Pane Grid Layout ─── */
+.pane-grid {
     flex: 1;
-    display: flex;
+    display: grid;
     overflow: hidden;
     min-height: 0;
+    gap: 1px;
+    background: var(--border); /* gap color = divider */
 }
 
-.split-pane {
-    flex: 1;
+.pane-cell {
     display: flex;
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
     position: relative;
+    background: var(--bg);
 }
 
-.split-pane.active-pane {
+.pane-cell.active-pane {
     box-shadow: inset 0 0 0 1px var(--blue);
 }
-
-.split-divider {
-    background: var(--border);
-    flex-shrink: 0;
-}
-
-.split-divider.vertical  { width: 1px; }
-.split-divider.horizontal { height: 1px; }
 
 .pane-header {
     display: flex;

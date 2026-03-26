@@ -4,7 +4,7 @@ import {
     StartSSHSession, StopSSHSession, GetWSPort,
 } from '../wailsjs/go/main/App'
 import { model } from '../wailsjs/go/models'
-import { Pane, SplitMode } from './types'
+import { Pane, Orientation } from './types'
 import Sidebar from './components/Sidebar'
 import Workspace from './components/Workspace'
 import Modal from './components/Modal'
@@ -16,7 +16,7 @@ export default function App() {
     const [connections, setConnections] = useState<Connection[]>([])
     const [panes, setPanes] = useState<Pane[]>([{ selectedIndex: -1, sessionId: null }])
     const [activePaneIndex, setActivePaneIndex] = useState(0)
-    const [splitMode, setSplitMode] = useState<SplitMode>('none')
+    const [orientation, setOrientation] = useState<Orientation>('horizontal')
     const [wsPort, setWsPort] = useState(0)
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
     const [modalOpen, setModalOpen] = useState(false)
@@ -24,11 +24,15 @@ export default function App() {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false)
     const [search, setSearch] = useState('')
 
-    const termFitRefs = useRef<Array<(() => void) | null>>([null, null])
+    const termFitRefs = useRef<Array<(() => void) | null>>([null, null, null, null])
 
     const activePane = panes[activePaneIndex] ?? panes[0]
     const selectedIndex = activePane?.selectedIndex ?? -1
     const currentSessionId = activePane?.sessionId ?? null
+
+    const refitAll = useCallback((delay = 50) => {
+        setTimeout(() => termFitRefs.current.forEach(fn => fn?.()), delay)
+    }, [])
 
     useEffect(() => {
         GetWSPort().then(setWsPort)
@@ -167,31 +171,40 @@ export default function App() {
         })
     }, [])
 
-    const splitPane = useCallback(async (mode: 'horizontal' | 'vertical') => {
-        setSplitMode(mode)
-        const connIdx = panes[0]?.selectedIndex ?? -1
+    const addPane = useCallback(async () => {
+        if (panes.length >= 4) return
+        const newIdx = panes.length
+        const connIdx = panes[activePaneIndex]?.selectedIndex ?? -1
         let sessionId: string | null = null
         if (connIdx >= 0) {
             try { sessionId = await StartSSHSession(connIdx) } catch { /* ignore */ }
         }
-        setPanes(prev => {
-            if (prev.length >= 2) return prev
-            return [...prev, { selectedIndex: connIdx, sessionId }]
-        })
-    }, [panes])
+        setPanes(prev => [...prev, { selectedIndex: connIdx, sessionId }])
+        setActivePaneIndex(newIdx)
+        refitAll()
+    }, [panes, activePaneIndex, refitAll])
 
-    const unsplit = useCallback(() => {
-        const second = panes[1]
-        if (second?.sessionId) StopSSHSession(second.sessionId)
-        setSplitMode('none')
-        setPanes(prev => [prev[0]])
-        setActivePaneIndex(0)
-    }, [panes])
+    const removePane = useCallback((idx: number) => {
+        const pane = panes[idx]
+        if (pane?.sessionId) StopSSHSession(pane.sessionId)
+        setPanes(prev => prev.filter((_, i) => i !== idx))
+        setActivePaneIndex(prev => {
+            if (prev === idx) return Math.max(0, idx - 1)
+            if (prev > idx) return prev - 1
+            return prev
+        })
+        refitAll()
+    }, [panes, refitAll])
+
+    const toggleOrientation = useCallback(() => {
+        setOrientation(o => o === 'horizontal' ? 'vertical' : 'horizontal')
+        refitAll()
+    }, [refitAll])
 
     const toggleSidebar = useCallback(() => {
         setSidebarCollapsed(v => !v)
-        setTimeout(() => { termFitRefs.current.forEach(fn => fn?.()) }, 210)
-    }, [])
+        refitAll(210)
+    }, [refitAll])
 
     const handleFitReady = useCallback((paneIdx: number, fn: () => void) => {
         termFitRefs.current[paneIdx] = fn
@@ -228,7 +241,6 @@ export default function App() {
             await DeleteConnection(selectedIndex)
             setDeleteModalOpen(false)
             setPanes([{ selectedIndex: -1, sessionId: null }])
-            setSplitMode('none')
             setActivePaneIndex(0)
             await loadConnections()
         } catch (e) {
@@ -266,15 +278,16 @@ export default function App() {
                     <Workspace
                         panes={panes}
                         activePaneIndex={activePaneIndex}
-                        splitMode={splitMode}
+                        orientation={orientation}
                         connections={connections}
                         wsPort={wsPort}
                         onActivatePane={setActivePaneIndex}
                         onConnectPane={connectPane}
                         onDisconnectPane={disconnectPane}
                         onSessionEnded={onSessionEnded}
-                        onSplit={splitPane}
-                        onUnsplit={unsplit}
+                        onAddPane={addPane}
+                        onRemovePane={removePane}
+                        onToggleOrientation={toggleOrientation}
                         onEdit={() => selectedIndex >= 0 && openEditModal(selectedIndex)}
                         onDelete={() => setDeleteModalOpen(true)}
                         onFitReady={handleFitReady}

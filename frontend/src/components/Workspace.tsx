@@ -1,40 +1,57 @@
 import React from 'react'
-import { Connection, Pane, SplitMode } from '../types'
+import { Connection, Pane, Orientation } from '../types'
 import PaneView from './Pane'
 
 interface Props {
     panes: Pane[]
     activePaneIndex: number
-    splitMode: SplitMode
+    orientation: Orientation
     connections: Connection[]
     wsPort: number
     onActivatePane: (i: number) => void
     onConnectPane: (i: number) => void
     onDisconnectPane: (i: number) => void
     onSessionEnded: (i: number) => void
-    onSplit: (mode: 'horizontal' | 'vertical') => void
-    onUnsplit: () => void
+    onAddPane: () => void
+    onRemovePane: (i: number) => void
+    onToggleOrientation: () => void
     onEdit: () => void
     onDelete: () => void
     onFitReady: (paneIdx: number, fn: () => void) => void
 }
 
+function getGridStyle(count: number, orientation: Orientation): React.CSSProperties {
+    if (count === 1) return { gridTemplateColumns: '1fr', gridTemplateRows: '1fr' }
+    if (count === 2) {
+        return orientation === 'horizontal'
+            ? { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr' }
+            : { gridTemplateColumns: '1fr', gridTemplateRows: '1fr 1fr' }
+    }
+    // 3 or 4: 2x2 grid
+    return { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr' }
+}
+
+function getPaneCellStyle(count: number, idx: number): React.CSSProperties {
+    // 3-pane layout: pane 0 spans the left column (both rows)
+    if (count === 3 && idx === 0) return { gridRow: '1 / 3' }
+    return {}
+}
+
 export default function Workspace({
-    panes, activePaneIndex, splitMode, connections, wsPort,
+    panes, activePaneIndex, orientation, connections, wsPort,
     onActivatePane, onConnectPane, onDisconnectPane, onSessionEnded,
-    onSplit, onUnsplit, onEdit, onDelete, onFitReady,
+    onAddPane, onRemovePane, onToggleOrientation,
+    onEdit, onDelete, onFitReady,
 }: Props) {
     const activePane = panes[activePaneIndex] ?? panes[0]
     const activeConn = activePane && activePane.selectedIndex >= 0
         ? connections[activePane.selectedIndex]
         : null
-
-    const isSplit = splitMode !== 'none'
-    const flexDir = splitMode === 'vertical' ? 'column' : 'row'
+    const count = panes.length
+    const isSplit = count > 1
 
     return (
         <div id="workspace">
-            {/* Topbar — shows active pane connection */}
             <div className="topbar" style={{ '--wails-draggable': 'drag' } as React.CSSProperties}>
                 <div className="topbar-info">
                     {activeConn ? (
@@ -49,45 +66,40 @@ export default function Workspace({
                     )}
                 </div>
                 <div className="topbar-actions" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
-                    {/* Connect / Disconnect for active pane */}
+                    {/* Connect / Disconnect — only when single pane */}
                     {!isSplit && (
                         activePane?.sessionId ? (
-                            <button className="btn-icon" title="Disconnect" onClick={() => onDisconnectPane(activePaneIndex)}>
+                            <button className="btn-icon" title="Disconnect" onClick={() => onDisconnectPane(0)}>
                                 <i className="ri-stop-fill"></i>
                             </button>
                         ) : (
-                            <button className="btn-icon" title="Connect" disabled={!activeConn} onClick={() => onConnectPane(activePaneIndex)}>
+                            <button className="btn-icon" title="Connect" disabled={!activeConn} onClick={() => onConnectPane(0)}>
                                 <i className="ri-play-fill"></i>
                             </button>
                         )
                     )}
 
-                    {/* Split controls */}
-                    {!isSplit ? (
-                        <>
-                            <button className="btn-icon" title="Split side by side" onClick={() => onSplit('horizontal')}>
-                                <i className="ri-layout-column-line"></i>
-                            </button>
-                            <button className="btn-icon" title="Split top / bottom" onClick={() => onSplit('vertical')}>
-                                <i className="ri-layout-row-line"></i>
-                            </button>
-                        </>
-                    ) : (
-                        <button className="btn-icon" title="Close split" onClick={onUnsplit}>
-                            <i className="ri-layout-fill"></i>
+                    {/* Orientation toggle — only when exactly 2 panes */}
+                    {count === 2 && (
+                        <button className="btn-icon" title={orientation === 'horizontal' ? 'Switch to vertical split' : 'Switch to horizontal split'} onClick={onToggleOrientation}>
+                            <i className={orientation === 'horizontal' ? 'ri-layout-row-line' : 'ri-layout-column-line'}></i>
                         </button>
                     )}
 
-                    <button className="btn-icon" title="Edit" disabled={!activeConn} onClick={onEdit}>
+                    {/* Add pane */}
+                    <button className="btn-icon" title="Add terminal pane" disabled={count >= 4} onClick={onAddPane}>
+                        <i className="ri-add-box-line"></i>
+                    </button>
+
+                    <button className="btn-icon" title="Edit connection" disabled={!activeConn} onClick={onEdit}>
                         <i className="ri-settings-3-line"></i>
                     </button>
-                    <button className="btn-icon btn-icon-danger" title="Delete" disabled={!activeConn} onClick={onDelete}>
+                    <button className="btn-icon btn-icon-danger" title="Delete connection" disabled={!activeConn} onClick={onDelete}>
                         <i className="ri-delete-bin-6-line"></i>
                     </button>
                 </div>
             </div>
 
-            {/* Info row — active pane connection details */}
             {activeConn && (
                 <div className="info-row">
                     <div className="info-pill">
@@ -111,28 +123,25 @@ export default function Workspace({
                 </div>
             )}
 
-            {/* Pane container */}
-            <div className="split-container" style={{ flexDirection: flexDir }}>
+            <div className="pane-grid" style={getGridStyle(count, orientation)}>
                 {panes.map((pane, idx) => (
-                    <React.Fragment key={idx}>
-                        {idx > 0 && (
-                            <div className={`split-divider ${splitMode === 'vertical' ? 'horizontal' : 'vertical'}`} />
-                        )}
-                        <PaneView
-                            connection={pane.selectedIndex >= 0 ? connections[pane.selectedIndex] : null}
-                            sessionId={pane.sessionId}
-                            isActive={idx === activePaneIndex}
-                            isSplit={isSplit}
-                            wsPort={wsPort}
-                            paneIndex={idx}
-                            onActivate={() => onActivatePane(idx)}
-                            onConnect={() => onConnectPane(idx)}
-                            onDisconnect={() => onDisconnectPane(idx)}
-                            onSessionEnded={() => onSessionEnded(idx)}
-                            onClose={onUnsplit}
-                            onFitReady={(fn) => onFitReady(idx, fn)}
-                        />
-                    </React.Fragment>
+                    <PaneView
+                        key={idx}
+                        connection={pane.selectedIndex >= 0 ? connections[pane.selectedIndex] : null}
+                        sessionId={pane.sessionId}
+                        isActive={idx === activePaneIndex}
+                        showHeader={isSplit}
+                        wsPort={wsPort}
+                        paneIndex={idx}
+                        paneCount={count}
+                        cellStyle={getPaneCellStyle(count, idx)}
+                        onActivate={() => onActivatePane(idx)}
+                        onConnect={() => onConnectPane(idx)}
+                        onDisconnect={() => onDisconnectPane(idx)}
+                        onSessionEnded={() => onSessionEnded(idx)}
+                        onClose={() => onRemovePane(idx)}
+                        onFitReady={(fn) => onFitReady(idx, fn)}
+                    />
                 ))}
             </div>
         </div>
