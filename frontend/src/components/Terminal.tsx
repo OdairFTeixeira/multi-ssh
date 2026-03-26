@@ -7,11 +7,12 @@ import '@xterm/xterm/css/xterm.css'
 interface Props {
     sessionId: string | null
     wsPort: number
+    bgColor: string
     onDisconnected: () => void
     onFitReady: (fn: () => void) => void
 }
 
-export default function Terminal({ sessionId, wsPort, onDisconnected, onFitReady }: Props) {
+export default function Terminal({ sessionId, wsPort, bgColor, onDisconnected, onFitReady }: Props) {
     const containerRef = useRef<HTMLDivElement>(null)
     const xtermRef = useRef<XTerm | null>(null)
     const fitAddonRef = useRef<FitAddon | null>(null)
@@ -29,7 +30,7 @@ export default function Terminal({ sessionId, wsPort, onDisconnected, onFitReady
             cursorBlink: true,
             cursorStyle: 'bar',
             theme: {
-                background:    '#000000',
+                background:    bgColor,
                 foreground:    '#f5f5f7',
                 cursor:        '#f5f5f7',
                 selectionBackground: 'rgba(10, 132, 255, 0.3)',
@@ -77,6 +78,13 @@ export default function Terminal({ sessionId, wsPort, onDisconnected, onFitReady
             fitAddonRef.current = null
         }
     }, [])
+
+    // Update background color dynamically
+    useEffect(() => {
+        if (xtermRef.current) {
+            xtermRef.current.options.theme = { ...xtermRef.current.options.theme, background: bgColor }
+        }
+    }, [bgColor])
 
     // Connect / disconnect based on sessionId
     useEffect(() => {
@@ -142,7 +150,7 @@ export default function Terminal({ sessionId, wsPort, onDisconnected, onFitReady
     }, [sessionId, wsPort])
 
     return (
-        <div className="terminal-container">
+        <div className="terminal-container" style={{ background: bgColor }}>
             {showPlaceholder && (
                 <div className="terminal-placeholder">
                     <i className="ri-terminal-line"></i>

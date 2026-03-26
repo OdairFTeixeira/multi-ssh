@@ -11,6 +11,7 @@ interface Props {
     onAdd: () => void
     onToggleCollapse: () => void
     onSearchChange: (v: string) => void
+    onOpenSettings: () => void
 }
 
 function matches(c: Connection, q: string): boolean {
@@ -20,7 +21,7 @@ function matches(c: Connection, q: string): boolean {
         || (c.description || '').toLowerCase().includes(q)
 }
 
-export default function Sidebar({ connections, selectedIndex, search, collapsed, onSelect, onDoubleClick, onAdd, onToggleCollapse, onSearchChange }: Props) {
+export default function Sidebar({ connections, selectedIndex, search, collapsed, onSelect, onDoubleClick, onAdd, onToggleCollapse, onSearchChange, onOpenSettings }: Props) {
     const q = search.toLowerCase()
 
     const groups: Record<string, { c: Connection; i: number }[]> = {}
@@ -97,6 +98,9 @@ export default function Sidebar({ connections, selectedIndex, search, collapsed,
                 <span className="conn-count">
                     {connections.length} connection{connections.length !== 1 ? 's' : ''}
                 </span>
+                <button className="btn-settings" title="Settings" onClick={onOpenSettings}>
+                    <i className="ri-settings-3-line"></i>
+                </button>
             </div>
         </aside>
     )

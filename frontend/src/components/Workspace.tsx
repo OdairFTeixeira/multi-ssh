@@ -8,6 +8,7 @@ interface Props {
     orientation: Orientation
     connections: Connection[]
     wsPort: number
+    termBgColor: string
     onActivatePane: (i: number) => void
     onConnectPane: (i: number) => void
     onDisconnectPane: (i: number) => void
@@ -38,7 +39,7 @@ function getPaneCellStyle(count: number, idx: number): React.CSSProperties {
 }
 
 export default function Workspace({
-    panes, activePaneIndex, orientation, connections, wsPort,
+    panes, activePaneIndex, orientation, connections, wsPort, termBgColor,
     onActivatePane, onConnectPane, onDisconnectPane, onSessionEnded,
     onAddPane, onRemovePane, onToggleOrientation,
     onEdit, onDelete, onFitReady,
@@ -132,6 +133,7 @@ export default function Workspace({
                         isActive={idx === activePaneIndex}
                         showHeader={isSplit}
                         wsPort={wsPort}
+                        termBgColor={termBgColor}
                         paneIndex={idx}
                         paneCount={count}
                         cellStyle={getPaneCellStyle(count, idx)}

@@ -11,6 +11,7 @@ interface Props {
     paneIndex: number
     paneCount: number
     cellStyle?: React.CSSProperties
+    termBgColor: string
     onActivate: () => void
     onConnect: () => void
     onDisconnect: () => void
@@ -20,7 +21,7 @@ interface Props {
 }
 
 export default function Pane({
-    connection, sessionId, isActive, showHeader, wsPort, cellStyle,
+    connection, sessionId, isActive, showHeader, wsPort, cellStyle, termBgColor,
     onActivate, onConnect, onDisconnect, onSessionEnded, onClose, onFitReady,
 }: Props) {
     return (
@@ -56,6 +57,7 @@ export default function Pane({
             <Terminal
                 sessionId={sessionId}
                 wsPort={wsPort}
+                bgColor={termBgColor}
                 onDisconnected={onSessionEnded}
                 onFitReady={onFitReady}
             />

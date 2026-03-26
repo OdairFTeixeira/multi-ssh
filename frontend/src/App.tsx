@@ -9,6 +9,7 @@ import Sidebar from './components/Sidebar'
 import Workspace from './components/Workspace'
 import Modal from './components/Modal'
 import DeleteModal from './components/DeleteModal'
+import Settings from './components/Settings'
 
 type Connection = model.Connection
 
@@ -23,12 +24,21 @@ export default function App() {
     const [editingIndex, setEditingIndex] = useState(-1)
     const [deleteModalOpen, setDeleteModalOpen] = useState(false)
     const [search, setSearch] = useState('')
+    const [settingsOpen, setSettingsOpen] = useState(false)
+    const [termBgColor, setTermBgColor] = useState<string>(
+        () => localStorage.getItem('termBgColor') ?? '#000000'
+    )
 
     const termFitRefs = useRef<Array<(() => void) | null>>([null, null, null, null])
 
     const activePane = panes[activePaneIndex] ?? panes[0]
     const selectedIndex = activePane?.selectedIndex ?? -1
     const currentSessionId = activePane?.sessionId ?? null
+
+    const handleTermBgColorChange = useCallback((color: string) => {
+        setTermBgColor(color)
+        localStorage.setItem('termBgColor', color)
+    }, [])
 
     const refitAll = useCallback((delay = 50) => {
         setTimeout(() => termFitRefs.current.forEach(fn => fn?.()), delay)
@@ -262,6 +272,7 @@ export default function App() {
                 onAdd={openAddModal}
                 onToggleCollapse={toggleSidebar}
                 onSearchChange={setSearch}
+                onOpenSettings={() => setSettingsOpen(true)}
             />
 
             <main id="mainContent">
@@ -281,6 +292,7 @@ export default function App() {
                         orientation={orientation}
                         connections={connections}
                         wsPort={wsPort}
+                        termBgColor={termBgColor}
                         onActivatePane={setActivePaneIndex}
                         onConnectPane={connectPane}
                         onDisconnectPane={disconnectPane}
@@ -309,6 +321,14 @@ export default function App() {
                     connectionName={selectedConn?.name ?? ''}
                     onClose={() => setDeleteModalOpen(false)}
                     onConfirm={deleteConnection}
+                />
+            )}
+
+            {settingsOpen && (
+                <Settings
+                    termBgColor={termBgColor}
+                    onTermBgColorChange={handleTermBgColorChange}
+                    onClose={() => setSettingsOpen(false)}
                 />
             )}
         </div>
